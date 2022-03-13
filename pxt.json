@@ -1,0 +1,42 @@
+{
+    "name": "micro:bit data transfer - Lego",
+    "description": "",
+    "dependencies": {
+        "core": "*",
+        "bluetooth": "*",
+        "microphone": "*",
+        "PF Transmitter": "github:aorczyk/lego-pf-transmitter#v0.0.7",
+        "pxt-sonar": "github:microsoft/pxt-sonar#v0.0.5"
+    },
+    "files": [
+        "main.blocks",
+        "main.ts",
+        "README.md"
+    ],
+    "testFiles": [
+        "test.ts"
+    ],
+    "targetVersions": {
+        "branch": "v1.1.61",
+        "tag": "v1.1.61",
+        "commits": "https://github.com/Microsoft/pxt-microbit/commits/60286e3cfd2ea167a1de5d55f069ec1ad8e80814",
+        "target": "4.0.18",
+        "pxt": "4.1.12",
+        "targetId": "microbit"
+    },
+    "supportedTargets": [
+        "microbit"
+    ],
+    "preferredEditor": "tsprj",
+    "yotta": {
+        "config": {
+            "microbit-dal": {
+                "bluetooth": {
+                    "open": 1,
+                    "pairing_mode": 0,
+                    "whitelist": 0
+                }
+            }
+        }
+    }
+}
