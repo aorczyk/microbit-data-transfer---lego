@@ -26,7 +26,7 @@ input.onButtonPressed(Button.B, function () {
     sendUSB = !sendUSB;
 })
 
-input.onButtonPressed(Button.A, function () {
+input.onButtonPressed(Button.AB, function () {
     legoMode += 1;
 
     if (legoMode > 1){
