@@ -6,6 +6,7 @@ bluetooth.startUartService()
 let engine1 = 0
 let engine2 = 0
 let interval = 500
+let legoMode = 0
 
 basic.showIcon(IconNames.Square)
 
@@ -25,18 +26,52 @@ input.onButtonPressed(Button.B, function () {
     sendUSB = !sendUSB;
 })
 
+input.onButtonPressed(Button.A, function () {
+    legoMode += 1;
+
+    if (legoMode > 1){
+        legoMode = 0
+    }
+
+    basic.showNumber(legoMode)
+})
+
+let btMessages: string[] = [];
+
 basic.forever(function() {    
-    let temp = input.temperature()
+    // let temp = input.temperature()
+    let temp = 5
     let value = sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
+    
+    let btData = [];
+    
     if (sendBluetooth){
-        bluetooth.uartWriteString(['temp', temp].join(',') + '\n')
+        btMessages.push(['time', input.runningTime(), 'temperature', temp].join(',') + '\n')
+        bluetooth.uartWriteString('')
         // bluetooth.uartWriteString(value + ',')
     } else if (sendUSB){
         serial.writeNumbers([value])
         // serial.writeString(temp + ',')
     }
+    
     basic.pause(interval)
 })
+
+// control.inBackground(function () {
+//     while (tasks.length > 0) {
+//         let i = 0;
+//         if (mixDatagrams) {
+//             i = getRandomInt(0, tasks.length - 1);
+//         }
+//         tasks[i].handler();
+//         tasks.splice(i, 1);
+
+//         // Pause time after each signal.
+//         basic.pause(settings.afterSignalPause)
+//     }
+
+//     schedulerIsWorking = false;
+// })
 
 function messageHandler(receivedString: String){
     let data = receivedString.split(';')
@@ -63,19 +98,6 @@ function messageHandler(receivedString: String){
         lastReceivedString = receivedString
         basic.clearScreen()
 
-        let engine1New = 0
-        let engine2New = 0
-
-        let keys = receivedString.split(';').map(x => +x)
-
-        for (let key of keys){
-            if (!engine1New && (key == 38 || key == 40 || key == 32)){
-                engine1New = key
-            } else if (!engine2New && (key == 37 || key == 39)) {
-                engine2New = key
-            }
-        }
-
         if (receivedString == "38;") {
             led.plot(2, 0)
         } else if (receivedString == "39;") {
@@ -96,29 +118,69 @@ function messageHandler(receivedString: String){
             led.plot(2, 2)
         }
 
-        if (engine1 != engine1New){
-            engine1 = engine1New
+        if (legoMode == 0){
+            let engine1New = 0
+            let engine2New = 0
 
-            if (engine1 == 32) {
-                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.BrakeThenFloat)
-            } else if (engine1 == 38){
-                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Backward7)
-            } else if (engine1 == 40){
-                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Forward7)
-            } else {
-                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Float)
+            let keys = receivedString.split(';').map(x => +x)
+
+            for (let key of keys) {
+                if (!engine1New && (key == 38 || key == 40 || key == 32)) {
+                    engine1New = key
+                } else if (!engine2New && (key == 37 || key == 39)) {
+                    engine2New = key
+                }
+            }
+
+            if (engine1 != engine1New) {
+                engine1 = engine1New
+
+                if (engine1 == 32) {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.BrakeThenFloat)
+                } else if (engine1 == 38) {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Backward7)
+                } else if (engine1 == 40) {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Forward7)
+                } else {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Float)
+                }
+            }
+
+            if (engine2 != engine2New) {
+                engine2 = engine2New
+
+                if (engine2 == 39) {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Backward7)
+                } else if (engine2 == 37) {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Forward7)
+                } else {
+                    pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Float)
+                }
             }
         }
 
-        if (engine2 != engine2New) {
-            engine2 = engine2New
-
-            if (engine2 == 39) {
+        if (legoMode == 1) {
+            if (receivedString == "38;") {
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Forward7)
                 pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Backward7)
-            } else if (engine2 == 37) {
+            } else if (receivedString == "39;") {
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Backward7)
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Backward7)
+            } else if (receivedString == "37;") {
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Forward7)
                 pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Forward7)
-            } else {
+            } else if (receivedString == "40;") {
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Backward7)
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Forward7)
+            } else if (receivedString == "38;39;") {
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Backward7)
                 pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Float)
+            } else if (receivedString == "37;38;") {
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Red, PfSingleOutput.Float)
+                pfTransmitter.singleOutputMode(PfChannel.Channel2, PfOutput.Blue, PfSingleOutput.Forward7)
+            } else if (receivedString == "37;40;") {
+            } else if (receivedString == "39;40;") {
+            } else {
             }
         }
     }
