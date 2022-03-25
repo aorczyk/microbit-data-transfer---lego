@@ -36,26 +36,26 @@ input.onButtonPressed(Button.AB, function () {
     basic.showNumber(legoMode)
 })
 
-let btMessages: string[] = [];
+// let btMessages: string[] = [];
 
-basic.forever(function() {    
-    // let temp = input.temperature()
-    let temp = 5
-    let value = sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
+// basic.forever(function() {    
+//     // let temp = input.temperature()
+//     let temp = 5
+//     let value = sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
     
-    let btData = [];
+//     let btData = [];
     
-    if (sendBluetooth){
-        btMessages.push(['time', input.runningTime(), 'temperature', temp].join(',') + '\n')
-        bluetooth.uartWriteString('')
-        // bluetooth.uartWriteString(value + ',')
-    } else if (sendUSB){
-        serial.writeNumbers([value])
-        // serial.writeString(temp + ',')
-    }
+//     if (sendBluetooth){
+//         btMessages.push(['time', input.runningTime(), 'temperature', temp].join(',') + '\n')
+//         bluetooth.uartWriteString('')
+//         // bluetooth.uartWriteString(value + ',')
+//     } else if (sendUSB){
+//         serial.writeNumbers([value])
+//         // serial.writeString(temp + ',')
+//     }
     
-    basic.pause(interval)
-})
+//     basic.pause(interval)
+// })
 
 // control.inBackground(function () {
 //     while (tasks.length > 0) {
@@ -196,8 +196,4 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
     let receivedString = bluetooth.uartReadUntil(serial.delimiters(Delimiters.NewLine))
 
     messageHandler(receivedString)
-})
-
-input.onGesture(Gesture.Shake, function () {
-    bluetooth.uartWriteString("S")
 })
