@@ -12,10 +12,12 @@ basic.showIcon(IconNames.Square)
 
 bluetooth.onBluetoothConnected(function () {
     basic.showIcon(IconNames.Yes)
+    // sendBluetooth = true;
 })
 
 bluetooth.onBluetoothDisconnected(function () {
     basic.showIcon(IconNames.No)
+    sendBluetooth = false;
 })
 
 input.onButtonPressed(Button.A, function () {
@@ -36,42 +38,199 @@ input.onButtonPressed(Button.AB, function () {
     basic.showNumber(legoMode)
 })
 
-// let btMessages: string[] = [];
+let tasks: string[] = [];
+let schedulerIsWorking = false;
+
+class Sensor2 {
+    private key: string;
+    private handler: () => number;
+    private interval: number;
+    private lastCheck: number;
+    private value: number;
+    private status: boolean;
+    private isRunning: boolean;
+
+    constructor(key: string, interval: number, handler: () => number) {
+        this.key = key;
+        this.interval = interval;
+        this.handler = handler;
+    }
+
+    public setInterval(interval: number): void {
+        this.stop()
+        this.interval = interval;
+        this.start()
+    }
+
+    public stop(): void {
+        this.status = false;
+        while (this.isRunning) {
+            basic.pause(10)
+        }
+    }
+
+    public start(): void {
+        this.status = true;
+        this.isRunning = true;
+        control.runInBackground(() => {
+            while (this.status) {
+                this.value = this.handler()
+                this.lastCheck = input.runningTime()
+
+                // if (sendBluetooth) {
+                let out = [this.key, this.value, this.lastCheck].join(',') + '\n'
+                // serial.writeLine(out)
+                bluetooth.uartWriteString(out)
+                // }
+
+                basic.pause(this.interval)
+            }
+
+            this.isRunning = false;
+        })
+    }
+}
+
+let temp2 = new Sensor2('temp', 1000, () => {
+    return input.temperature()
+})
+
+temp2.start()
+
+control.runInBackground(() => {
+    basic.pause(5000)
+    temp2.setInterval(5000)
+    // basic.pause(6000)
+    temp2.setInterval(500)
+})
+
+type Sensor = {
+    key: string;
+    handler: () => number;
+    interval: number;
+    lastCheck: number;
+    value: number;
+    status: boolean
+}
+
+let measurements: Sensor[] = [];
+
+// measurements.push({
+//     key: 'temp',
+//     handler: () => { return input.temperature() },
+//     interval:1000,
+//     lastCheck: 0,
+//     value: 0,
+//     status: true
+// })
+
+// measurements.push({
+//     key: 'accX',
+//     handler: () => { return input.acceleration(Dimension.X) },
+//     interval: 500,
+//     lastCheck: 0,
+//     value: 0
+// })
+
+// measurements.push({
+//     key: 'accY',
+//     handler: () => { return input.acceleration(Dimension.Y) },
+//     interval: 500,
+//     lastCheck: 0,
+//     value: 0
+// })
+
+// for (let sensor of measurements){
+//     control.runInBackground(() => {
+//         while(sensor.status){
+//             sensor.value = sensor.handler()
+//             sensor.lastCheck = input.runningTime()
+
+//             // if (sendBluetooth) {
+//                 let out = [sensor.key, sensor.value, sensor.lastCheck].join(',') + '\n'
+//                 // serial.writeLine(out)
+//                 bluetooth.uartWriteString(out)
+//             // }
+
+//             basic.pause(sensor.interval)
+//         }
+//     })
+// }
+
+// control.runInBackground(() => {
+//     let sensor = measurements.filter(s => {
+//         return s.key == 'temp'
+//     })[0]
+
+//     basic.pause(5000)
+//     sensor.interval = 5000
+//     basic.pause(10000)
+//     sensor.status = false
+// })
+
+let lastOutput: string = '';
 
 // basic.forever(function() {    
-//     // let temp = input.temperature()
-//     let temp = 5
-//     let value = sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
+//     // // let temp = input.temperature()
+//     // let temp = 5
+//     // let value = sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
     
-//     let btData = [];
+//     // let btData = [];
     
-//     if (sendBluetooth){
-//         btMessages.push(['time', input.runningTime(), 'temperature', temp].join(',') + '\n')
-//         bluetooth.uartWriteString('')
-//         // bluetooth.uartWriteString(value + ',')
-//     } else if (sendUSB){
-//         serial.writeNumbers([value])
-//         // serial.writeString(temp + ',')
-//     }
+//     // if (sendBluetooth){
+//     //     btMessages.push(['time', input.runningTime(), 'temperature', temp].join(',') + '\n')
+//     //     bluetooth.uartWriteString('')
+//     //     // bluetooth.uartWriteString(value + ',')
+//     // } else if (sendUSB){
+//     //     serial.writeNumbers([value])
+//     //     // serial.writeString(temp + ',')
+//     // }
     
-//     basic.pause(interval)
-// })
+//     // basic.pause(interval)
+//     let time = input.runningTime();
+//     let output: number[] = [];
+//     let newValue = false;
 
-// control.inBackground(function () {
-//     while (tasks.length > 0) {
-//         let i = 0;
-//         if (mixDatagrams) {
-//             i = getRandomInt(0, tasks.length - 1);
+//     for (let sensor of measurements){
+//         if ((time - sensor.lastCheck) > sensor.interval){
+//             sensor.value = sensor.handler()
+//             sensor.lastCheck = time
+//             newValue = true;
 //         }
-//         tasks[i].handler();
-//         tasks.splice(i, 1);
 
-//         // Pause time after each signal.
-//         basic.pause(settings.afterSignalPause)
+//         output.push(sensor.value)
 //     }
 
-//     schedulerIsWorking = false;
+//     let outputString: string = output.join(',') + '\n'
+
+//     // if (outputString != lastOutput){
+//     //     lastOutput = outputString
+//     //     tasks.push(time + ',' + outputString)
+//     // }
+
+//     if (newValue){
+//         tasks.push(time + ',' + outputString)
+//     }
+
+//     if (!schedulerIsWorking && newValue){
+//         schedulerIsWorking = true;
+
+//         control.inBackground(function () {
+//             while (tasks.length > 0) {
+//                 let i = 0;
+//                 if (sendBluetooth){
+//                     bluetooth.uartWriteString(tasks[i])
+//                 }
+//                 tasks.splice(i, 1);
+//                 basic.pause(10)
+//             }
+
+//             schedulerIsWorking = false;
+//         })
+//     }
 // })
+
+
 
 function messageHandler(receivedString: String){
     let data = receivedString.split(';')
@@ -164,11 +323,11 @@ function messageHandler(receivedString: String){
                 pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Red, PfSingleOutput.Backward7)
                 pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Blue, PfSingleOutput.Forward7)
             } else if (receivedString == "39;") {
-                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Red, PfSingleOutput.Backward3)
-                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Blue, PfSingleOutput.Backward3)
+                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Red, PfSingleOutput.Backward5)
+                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Blue, PfSingleOutput.Backward5)
             } else if (receivedString == "37;") {
-                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Red, PfSingleOutput.Forward3)
-                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Blue, PfSingleOutput.Forward3)
+                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Red, PfSingleOutput.Forward5)
+                pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Blue, PfSingleOutput.Forward5)
             } else if (receivedString == "40;") {
                 pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Red, PfSingleOutput.Forward7)
                 pfTransmitter.singleOutputMode(PfChannel.Channel1, PfOutput.Blue, PfSingleOutput.Backward7)
