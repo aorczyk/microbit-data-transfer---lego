@@ -41,7 +41,15 @@ input.onButtonPressed(Button.AB, function () {
 let tasks: string[] = [];
 let schedulerIsWorking = false;
 
-class Sensor2 {
+type SensorData = {
+    key: string;
+    interval: number;
+    lastCheck: number;
+    value: number;
+    status: boolean
+}
+
+class Sensor {
     private key: string;
     private handler: () => number;
     private interval: number;
@@ -54,6 +62,20 @@ class Sensor2 {
         this.key = key;
         this.interval = interval;
         this.handler = handler;
+    }
+
+    public getData(interval: number): SensorData {
+        this.stop()
+        this.interval = interval;
+        this.start()
+
+        return {
+            key: this.key,
+            interval: this.interval,
+            lastCheck: this.lastCheck,
+            value: this.value,
+            status: this.status
+        }
     }
 
     public setInterval(interval: number): void {
@@ -74,11 +96,14 @@ class Sensor2 {
         this.isRunning = true;
         control.runInBackground(() => {
             while (this.status) {
+                let getDataStart = input.runningTime();
                 this.value = this.handler()
-                this.lastCheck = input.runningTime()
+                let getDataStop = input.runningTime();
+
+                this.lastCheck = getDataStart
 
                 // if (sendBluetooth) {
-                let out = [this.key, this.value, this.lastCheck].join(',') + '\n'
+                let out = [this.key, this.value, this.lastCheck, getDataStop - getDataStart].join(',') + '\n'
                 // serial.writeLine(out)
                 bluetooth.uartWriteString(out)
                 // }
@@ -91,7 +116,7 @@ class Sensor2 {
     }
 }
 
-let temp2 = new Sensor2('temp', 1000, () => {
+let temp2 = new Sensor('temp', 1000, () => {
     return input.temperature()
 })
 
@@ -103,70 +128,6 @@ control.runInBackground(() => {
     // basic.pause(6000)
     temp2.setInterval(500)
 })
-
-type Sensor = {
-    key: string;
-    handler: () => number;
-    interval: number;
-    lastCheck: number;
-    value: number;
-    status: boolean
-}
-
-let measurements: Sensor[] = [];
-
-// measurements.push({
-//     key: 'temp',
-//     handler: () => { return input.temperature() },
-//     interval:1000,
-//     lastCheck: 0,
-//     value: 0,
-//     status: true
-// })
-
-// measurements.push({
-//     key: 'accX',
-//     handler: () => { return input.acceleration(Dimension.X) },
-//     interval: 500,
-//     lastCheck: 0,
-//     value: 0
-// })
-
-// measurements.push({
-//     key: 'accY',
-//     handler: () => { return input.acceleration(Dimension.Y) },
-//     interval: 500,
-//     lastCheck: 0,
-//     value: 0
-// })
-
-// for (let sensor of measurements){
-//     control.runInBackground(() => {
-//         while(sensor.status){
-//             sensor.value = sensor.handler()
-//             sensor.lastCheck = input.runningTime()
-
-//             // if (sendBluetooth) {
-//                 let out = [sensor.key, sensor.value, sensor.lastCheck].join(',') + '\n'
-//                 // serial.writeLine(out)
-//                 bluetooth.uartWriteString(out)
-//             // }
-
-//             basic.pause(sensor.interval)
-//         }
-//     })
-// }
-
-// control.runInBackground(() => {
-//     let sensor = measurements.filter(s => {
-//         return s.key == 'temp'
-//     })[0]
-
-//     basic.pause(5000)
-//     sensor.interval = 5000
-//     basic.pause(10000)
-//     sensor.status = false
-// })
 
 let lastOutput: string = '';
 
