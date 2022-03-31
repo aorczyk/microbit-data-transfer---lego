@@ -38,9 +38,6 @@ input.onButtonPressed(Button.AB, function () {
     basic.showNumber(legoMode)
 })
 
-let tasks: string[] = [];
-let schedulerIsWorking = false;
-
 type SensorData = {
     key: string;
     interval: number;
@@ -57,11 +54,15 @@ class Sensor {
     private value: number;
     private status: boolean;
     private isRunning: boolean;
+    private delta: number;
+    private sendIf: (value: number) => boolean;
 
-    constructor(key: string, interval: number, handler: () => number) {
+    constructor(key: string, interval: number, handler: () => number, delta: number = null, sendIf: (value: number) => boolean = null) {
         this.key = key;
         this.interval = interval;
         this.handler = handler;
+        this.delta = delta;
+        this.sendIf = sendIf;
     }
 
     public getData(interval: number): SensorData {
@@ -97,16 +98,33 @@ class Sensor {
         control.runInBackground(() => {
             while (this.status) {
                 let getDataStart = input.runningTime();
-                this.value = this.handler()
+                let value = this.handler()
                 let getDataStop = input.runningTime();
 
                 this.lastCheck = getDataStart
+                let send = true;
 
-                // if (sendBluetooth) {
-                let out = [this.key, this.value, this.lastCheck, getDataStop - getDataStart].join(',') + '\n'
-                // serial.writeLine(out)
-                bluetooth.uartWriteString(out)
-                // }
+                if (this.value != null){
+                    if (this.delta != null){
+                        if (value >= (this.value + this.delta) || value <= (this.value - this.delta)) {
+                            send = true;
+                            this.value = value;
+                        } else {
+                            send = false
+                        }
+                    }
+                } else {
+                    this.value = value;
+                }
+
+                if (send && typeof this.sendIf == 'function'){
+                    send = this.sendIf(value)
+                }
+
+                if (send) {
+                    let out = [this.key, value, this.lastCheck, getDataStop - getDataStart].join(',') + '\n'
+                    bluetooth.uartWriteString(out)
+                }
 
                 basic.pause(this.interval)
             }
@@ -116,21 +134,27 @@ class Sensor {
     }
 }
 
-let temp2 = new Sensor('temp', 1000, () => {
+// let temp2 = new Sensor('temp', 1000, () => {
+//     return input.temperature()
+// }, 2, (value: number) => {return value > 30})
+
+let temp2 = new Sensor('temp', 2000, () => {
     return input.temperature()
 })
 
 temp2.start()
 
-control.runInBackground(() => {
-    basic.pause(5000)
-    temp2.setInterval(5000)
-    // basic.pause(6000)
-    temp2.setInterval(500)
-})
+// control.runInBackground(() => {
+//     basic.pause(5000)
+//     temp2.setInterval(5000)
+//     // basic.pause(6000)
+//     temp2.setInterval(500)
+// })
 
 let lastOutput: string = '';
 
+// let tasks: string[] = [];
+// let schedulerIsWorking = false;
 // basic.forever(function() {    
 //     // // let temp = input.temperature()
 //     // let temp = 5
