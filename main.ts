@@ -1,4 +1,4 @@
-let sendBluetooth = false;
+let sendBluetooth = true;
 let sendUSB = false;
 let lastReceivedString: String = null;
 pfTransmitter.connectIrSenderLed(AnalogPin.P2)
@@ -12,7 +12,7 @@ basic.showIcon(IconNames.Square)
 
 bluetooth.onBluetoothConnected(function () {
     basic.showIcon(IconNames.Yes)
-    // sendBluetooth = true;
+    sendBluetooth = true;
 })
 
 bluetooth.onBluetoothDisconnected(function () {
@@ -38,45 +38,30 @@ input.onButtonPressed(Button.AB, function () {
     basic.showNumber(legoMode)
 })
 
-type SensorData = {
-    key: string;
-    interval: number;
-    lastCheck: number;
-    value: number;
-    status: boolean
-}
-
 class Sensor {
-    private key: string;
+    public key: string;
     private handler: () => number;
     private interval: number;
     private lastCheck: number;
     private value: number;
+    private lastValue: number;
     private status: boolean;
     private isRunning: boolean;
     private delta: number;
-    private sendIf: (value: number) => boolean;
+    private sendIf: (value: number, lastValue: number) => boolean;
+    private sendOnlyNewValue: boolean;
 
-    constructor(key: string, interval: number, handler: () => number, delta: number = null, sendIf: (value: number) => boolean = null) {
+    constructor(key: string, interval: number, handler: () => number, sendOnlyNewValue: boolean = false, delta: number = null, sendIf: (value: number, lastValue: number) => boolean = null) {
         this.key = key;
         this.interval = interval;
         this.handler = handler;
         this.delta = delta;
         this.sendIf = sendIf;
+        this.sendOnlyNewValue = sendOnlyNewValue;
     }
 
-    public getData(interval: number): SensorData {
-        this.stop()
-        this.interval = interval;
-        this.start()
-
-        return {
-            key: this.key,
-            interval: this.interval,
-            lastCheck: this.lastCheck,
-            value: this.value,
-            status: this.status
-        }
+    public getData(interval: number) {
+        return this.handler()
     }
 
     public setInterval(interval: number): void {
@@ -107,23 +92,35 @@ class Sensor {
                 if (this.value != null){
                     if (this.delta != null){
                         if (value >= (this.value + this.delta) || value <= (this.value - this.delta)) {
-                            send = true;
                             this.value = value;
                         } else {
                             send = false
                         }
+                    } else {
+                        this.value = value;
                     }
                 } else {
                     this.value = value;
                 }
 
+                if (this.sendOnlyNewValue && this.value == this.lastValue) {
+                    send = false
+                }
+
                 if (send && typeof this.sendIf == 'function'){
-                    send = this.sendIf(value)
+                    send = this.sendIf(this.value, this.lastValue)
                 }
 
                 if (send) {
-                    let out = [this.key, value, this.lastCheck, getDataStop - getDataStart].join(',') + '\n'
-                    bluetooth.uartWriteString(out)
+                    let out = [this.key, this.value, this.lastCheck, getDataStop - getDataStart, this.lastValue].join(',') + '\n'
+                    this.lastValue = this.value
+
+                    if (sendBluetooth){
+                        bluetooth.uartWriteString(out)
+                    } else if (sendUSB){
+                        // serial.writeNumbers([value, this.lastCheck, getDataStop - getDataStart])
+                        serial.writeString(out)
+                    }
                 }
 
                 basic.pause(this.interval)
@@ -134,88 +131,27 @@ class Sensor {
     }
 }
 
-// let temp2 = new Sensor('temp', 1000, () => {
-//     return input.temperature()
-// }, 2, (value: number) => {return value > 30})
+let measurements: Sensor[] = [];
 
-let temp2 = new Sensor('temp', 2000, () => {
+// Temperature
+measurements.push(new Sensor('temp', 2000, () => {
     return input.temperature()
-})
+}, true))
 
-temp2.start()
+// Sonar
+// measurements.push(new Sensor('sonar', 500, () => {
+//     return sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
+// }))
 
-// control.runInBackground(() => {
-//     basic.pause(5000)
-//     temp2.setInterval(5000)
-//     // basic.pause(6000)
-//     temp2.setInterval(500)
-// })
+for (let sensor of measurements){
+    sensor.start()
+}
 
-let lastOutput: string = '';
-
-// let tasks: string[] = [];
-// let schedulerIsWorking = false;
-// basic.forever(function() {    
-//     // // let temp = input.temperature()
-//     // let temp = 5
-//     // let value = sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
-    
-//     // let btData = [];
-    
-//     // if (sendBluetooth){
-//     //     btMessages.push(['time', input.runningTime(), 'temperature', temp].join(',') + '\n')
-//     //     bluetooth.uartWriteString('')
-//     //     // bluetooth.uartWriteString(value + ',')
-//     // } else if (sendUSB){
-//     //     serial.writeNumbers([value])
-//     //     // serial.writeString(temp + ',')
-//     // }
-    
-//     // basic.pause(interval)
-//     let time = input.runningTime();
-//     let output: number[] = [];
-//     let newValue = false;
-
-//     for (let sensor of measurements){
-//         if ((time - sensor.lastCheck) > sensor.interval){
-//             sensor.value = sensor.handler()
-//             sensor.lastCheck = time
-//             newValue = true;
-//         }
-
-//         output.push(sensor.value)
-//     }
-
-//     let outputString: string = output.join(',') + '\n'
-
-//     // if (outputString != lastOutput){
-//     //     lastOutput = outputString
-//     //     tasks.push(time + ',' + outputString)
-//     // }
-
-//     if (newValue){
-//         tasks.push(time + ',' + outputString)
-//     }
-
-//     if (!schedulerIsWorking && newValue){
-//         schedulerIsWorking = true;
-
-//         control.inBackground(function () {
-//             while (tasks.length > 0) {
-//                 let i = 0;
-//                 if (sendBluetooth){
-//                     bluetooth.uartWriteString(tasks[i])
-//                 }
-//                 tasks.splice(i, 1);
-//                 basic.pause(10)
-//             }
-
-//             schedulerIsWorking = false;
-//         })
-//     }
-// })
-
-
+function getSesorByKey(key: string): Sensor {
+    return measurements.filter(s => {
+        return s.key == key
+    })[0]
+}
 
 function messageHandler(receivedString: String){
     let data = receivedString.split(';')
@@ -226,8 +162,19 @@ function messageHandler(receivedString: String){
         return
     }
 
-    if (data[1] == 'interval') {
-        interval = +data[2]
+    if (data[0] == 'sensor') {
+        let sensor = getSesorByKey(data[1]);
+
+        if (data[2] == 'interval'){
+            sensor.setInterval(+data[3])
+        } else if (data[2] == 'status') {
+            let status = +data[3]
+            if (status){
+                sensor.start()
+            } else {
+                sensor.stop()
+            }
+        }
         return
     }
 
