@@ -60,7 +60,7 @@ class Sensor {
         this.sendOnlyNewValue = sendOnlyNewValue;
     }
 
-    public getData(interval: number) {
+    public getData() {
         return this.handler()
     }
 
@@ -173,6 +173,14 @@ function messageHandler(receivedString: String){
                 sensor.start()
             } else {
                 sensor.stop()
+            }
+        } else if (data[2] == 'get') {
+            let out = sensor.getData()
+
+            if (sendBluetooth) {
+                bluetooth.uartWriteString(out + '\n')
+            } else if (sendUSB) {
+                serial.writeString(out + '\n')
             }
         }
         return
