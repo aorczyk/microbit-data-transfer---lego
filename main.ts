@@ -42,22 +42,22 @@ class Sensor {
     public key: string;
     private handler: () => number;
     private interval: number;
-    private lastCheck: number;
-    private value: number;
-    private lastValue: number;
+    public lastCheck: number;
+    public value: number;
+    public lastValue: number;
     private status: boolean;
     private isRunning: boolean;
     private delta: number;
-    private sendIf: (value: number, lastValue: number) => boolean;
-    private sendOnlyNewValue: boolean;
+    private condition: (value: number, lastValue: number) => boolean;
+    private onChange: (event: Sensor) => void;
 
-    constructor(key: string, interval: number, handler: () => number, sendOnlyNewValue: boolean = false, delta: number = null, sendIf: (value: number, lastValue: number) => boolean = null) {
+    constructor(key: string, interval: number, handler: () => number, onChange: (event: Sensor) => void, delta: number = null, condition: (value: number, lastValue: number) => boolean = null) {
         this.key = key;
         this.interval = interval;
         this.handler = handler;
         this.delta = delta;
-        this.sendIf = sendIf;
-        this.sendOnlyNewValue = sendOnlyNewValue;
+        this.condition = condition;
+        this.onChange = onChange;
     }
 
     public getData() {
@@ -89,40 +89,25 @@ class Sensor {
                 this.lastCheck = getDataStart
                 let send = true;
 
-                if (this.value != null){
-                    if (this.delta != null){
-                        if (value >= (this.value + this.delta) || value <= (this.value - this.delta)) {
-                            this.value = value;
-                        } else {
-                            send = false
-                        }
-                    } else {
+                if (this.delta != null && this.value != null){
+                    if (value > (this.value + this.delta) || value < (this.value - this.delta)) {
                         this.value = value;
+                    } else {
+                        continue;
                     }
                 } else {
                     this.value = value;
                 }
 
-                if (this.sendOnlyNewValue && this.value == this.lastValue) {
-                    send = false
+                if (typeof this.condition == 'function' && !this.condition(this.value, this.lastValue)){
+                    continue;
                 }
 
-                if (send && typeof this.sendIf == 'function'){
-                    send = this.sendIf(this.value, this.lastValue)
+                if (typeof this.onChange == 'function') {
+                    this.onChange(this)
                 }
 
-                if (send) {
-                    let out = [this.key, this.value, this.lastCheck, getDataStop - getDataStart, this.lastValue].join(',') + '\n'
-                    this.lastValue = this.value
-
-                    if (sendBluetooth){
-                        bluetooth.uartWriteString(out)
-                    } else if (sendUSB){
-                        // serial.writeNumbers([value, this.lastCheck, getDataStop - getDataStart])
-                        serial.writeString(out)
-                    }
-                }
-
+                this.lastValue = this.value
                 basic.pause(this.interval)
             }
 
@@ -136,7 +121,16 @@ let measurements: Sensor[] = [];
 // Temperature
 measurements.push(new Sensor('temp', 2000, () => {
     return input.temperature()
-}, true))
+}, (event) => {
+    let out = [event.key, event.value, event.lastCheck, event.lastValue].join(',') + '\n'
+
+    if (sendBluetooth) {
+        bluetooth.uartWriteString(out)
+    } else if (sendUSB) {
+        // serial.writeNumbers([value, this.lastCheck, getDataStop - getDataStart])
+        serial.writeString(out)
+    }
+}, 0))
 
 // Sonar
 // measurements.push(new Sensor('sonar', 500, () => {
