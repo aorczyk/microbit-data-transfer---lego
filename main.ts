@@ -158,6 +158,10 @@ function messageHandler(receivedString: String){
     if (data[0] == 'sensor') {
         let sensor = getSesorByKey(data[1]);
 
+        if (!sensor){
+            return;
+        }
+
         if (data[2] == 'interval'){
             sensor.setInterval(+data[3])
         } else if (data[2] == 'status') {
