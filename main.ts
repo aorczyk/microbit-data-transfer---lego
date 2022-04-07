@@ -26,6 +26,7 @@ input.onButtonPressed(Button.A, function () {
 
 input.onButtonPressed(Button.B, function () {
     sendUSB = !sendUSB;
+    serial.writeNumbers([10])
 })
 
 input.onButtonPressed(Button.AB, function () {
@@ -61,21 +62,27 @@ class Sensor {
     }
 
     public setInterval(interval: number): void {
-        this.stop()
         this.interval = interval;
-        this.start()
+        bluetooth.uartWriteString(this.key + '- interval: ' + interval + '\n')
+    }
+
+    public setDelta(delta: number): void {
+        this.delta = delta;
+        bluetooth.uartWriteString(this.key + '- delta: ' + delta + '\n')
     }
 
     public stop(): void {
         this.status = false;
-        while (this.isRunning) {
-            basic.pause(10)
-        }
+        bluetooth.uartWriteString(this.key + '- stop\n')
+
     }
 
     public start(): void {
+        bluetooth.uartWriteString(this.key + '- start\n')
+
         this.status = true;
         this.isRunning = true;
+        this.value = null;
 
         control.runInBackground(() => {
             while (this.status) {
@@ -101,7 +108,9 @@ class Sensor {
                 }
 
                 if (changed && typeof this.onChange == 'function') {
-                    this.onChange(this)
+                    control.runInBackground(() => {
+                        this.onChange(this)
+                    })
                     this.lastValue = this.value
                 }
 
@@ -109,13 +118,41 @@ class Sensor {
             }
 
             this.isRunning = false;
+            bluetooth.uartWriteString(this.key + '- stopped\n')
         })
     }
 }
 
-function sendData(sensor: Sensor){
-    let out = [sensor.key, sensor.value, sensor.lastCheck, sensor.lastValue].join(';') + '\n'
+// let messageQueue: string[] = [];
+// let messageQueueRunning = false;
 
+// function sendMessage(message: string){
+//     messageQueue.push(message);
+    
+//     if (!messageQueueRunning){
+//         messageQueueRunning = true;
+//         control.runInBackground(() => {
+//             while (messageQueue.length) {
+//                 let message = messageQueue.shift()
+
+//                 if (sendBluetooth) {
+//                     bluetooth.uartWriteString(message)
+//                 } else if (sendUSB) {
+//                     // serial.writeNumbers([value, this.lastCheck, getDataStop - getDataStart])
+//                     serial.writeString(message)
+//                 }
+
+//                 basic.pause(10);
+//             }
+
+//             messageQueueRunning = false;
+//         })
+//     }
+// }
+
+function sendData(sensor: Sensor){
+    // let out = [sensor.key, sensor.value, sensor.lastCheck].join(';') + '\n'
+    let out = [sensor.key, sensor.value, sensor.lastCheck].join(';') + '\n'
     if (sendBluetooth) {
         bluetooth.uartWriteString(out)
     } else if (sendUSB) {
@@ -130,6 +167,16 @@ let measurements: Sensor[] = [];
 measurements.push(new Sensor('temp', 2000, () => {
     return input.temperature()
 }, sendData, 0))
+
+// Light
+measurements.push(new Sensor('light', 1000, () => {
+    return input.lightLevel()
+}, sendData, 10))
+
+// Light
+measurements.push(new Sensor('ax', 1000, () => {
+    return input.acceleration(Dimension.X)
+}, sendData, 10))
 
 // Sonar
 // measurements.push(new Sensor('sonar', 500, () => {
@@ -155,30 +202,36 @@ function messageHandler(receivedString: String){
         return
     }
 
-    if (data[0] == 'sensor') {
-        let sensor = getSesorByKey(data[1]);
-
-        if (!sensor){
-            return;
+    if (data[0] == 'WebUSB') {
+        if (data[1] == 'on') {
+            sendUSB = true;
+        } else {
+            sendUSB = false;
         }
+        return
+    }
 
-        if (data[2] == 'interval'){
-            sensor.setInterval(+data[3])
-        } else if (data[2] == 'status') {
-            let status = +data[3]
-            if (status){
+    let sensor = getSesorByKey(data[0]);
+    if (sensor) {
+        if (data[1] == 'interval'){
+            sensor.setInterval(+data[2])
+        } else if (data[1] == 'delta') {
+            if (data[2] == ''){
+                sensor.setDelta(null)
+            } else {
+                sensor.setDelta(+data[2])
+            }
+        } else if (data[1] == 'status') {
+            let status = data[2]
+            if (status == 'on'){
                 sensor.start()
             } else {
                 sensor.stop()
             }
-        } else if (data[2] == 'get') {
-            let out = sensor.getData()
-
-            if (sendBluetooth) {
-                bluetooth.uartWriteString(out + '\n')
-            } else if (sendUSB) {
-                serial.writeString(out + '\n')
-            }
+            
+        } else if (data[1] == 'get') {
+            let out = sensor.getData() + '\n';
+            bluetooth.uartWriteString(out)
         }
         return
     }
