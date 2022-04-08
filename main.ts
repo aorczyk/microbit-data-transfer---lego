@@ -26,7 +26,6 @@ input.onButtonPressed(Button.A, function () {
 
 input.onButtonPressed(Button.B, function () {
     sendUSB = !sendUSB;
-    serial.writeNumbers([10])
 })
 
 input.onButtonPressed(Button.AB, function () {
@@ -101,7 +100,6 @@ basic.forever(() => {
     let out: number[] = [now]
 
     for (let sensor of measurements) {
-        // serial.writeString([now, sensor.status ? 1 : 0, sensor.interval, sensor.lastCheck].join(',') + '\n')
         if (sensor.status && now >= (sensor.interval + sensor.lastCheck)) {
             changed = changed || sensor.check()
         }
@@ -110,7 +108,6 @@ basic.forever(() => {
     }
 
     if (changed) {
-        serial.writeNumbers(out)
         if (sendBluetooth) {
             bluetooth.uartWriteString(out.join(',') + '\n')
         } else if (sendUSB) {
@@ -132,6 +129,10 @@ measurements.push(new Sensor('light', 1000, () => {
 // Light
 measurements.push(new Sensor('ax', 1000, () => {
     return input.acceleration(Dimension.X)
+}, 10))
+
+measurements.push(new Sensor('ay', 1000, () => {
+    return input.acceleration(Dimension.Y)
 }, 10))
 
 // Sonar
@@ -167,7 +168,7 @@ function messageHandler(receivedString: String){
             sensor.status = false
         }
 
-        if (data.length > 2){
+        if (data.length > 2 && data[2] && data[3]){
             sensor.interval = +data[2];
 
             if (data[3] == '') {
