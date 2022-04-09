@@ -137,13 +137,19 @@ measurements.push(new Sensor('light', 1000, () => {
     return input.lightLevel()
 }, 10))
 
-// Light
+// Acceleration X
 measurements.push(new Sensor('ax', 1000, () => {
     return input.acceleration(Dimension.X)
 }, 10))
 
+// Acceleration Y
 measurements.push(new Sensor('ay', 1000, () => {
     return input.acceleration(Dimension.Y)
+}, 10))
+
+// Sound
+measurements.push(new Sensor('sound', 500, () => {
+    return input.soundLevel()
 }, 10))
 
 // Sonar
