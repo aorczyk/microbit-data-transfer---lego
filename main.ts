@@ -12,6 +12,7 @@ basic.showIcon(IconNames.Square)
 
 bluetooth.onBluetoothConnected(function () {
     basic.showIcon(IconNames.Yes)
+    sendDataHeader()
     sendBluetooth = true;
 })
 
@@ -58,7 +59,7 @@ class Sensor {
         this.condition = condition;
         this.key = key;
         this.lastCheck = input.runningTime();
-        this.status = true;
+        this.status = false;
     }
 
     public check(): boolean {
@@ -115,6 +116,16 @@ basic.forever(() => {
         }
     }
 })
+
+function sendDataHeader() {
+    let out: string[] = ['time']
+
+    for (let sensor of measurements) {
+        out.push(sensor.key)
+    }
+
+    bluetooth.uartWriteString(out.join(',') + '\n')
+}
 
 // Temperature
 measurements.push(new Sensor('temp', 2000, () => {
