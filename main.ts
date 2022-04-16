@@ -184,9 +184,9 @@ measurements.push(new Sensor('rand', 1000, () => {
 }, 0))
 
 // Compas
-measurements.push(new Sensor('compas', 500, () => {
-    return input.compassHeading()
-}, 0))
+// measurements.push(new Sensor('compas', 500, () => {
+//     return input.compassHeading()
+// }, 0))
 
 // Sonar
 // measurements.push(new Sensor('sonar', 500, () => {
@@ -204,13 +204,20 @@ function messageHandler(receivedString: String){
     }
 
     if (data[0] == 'usb') {
-        // sendUSB = !sendUSB;
+        basic.showString(receivedString + '')
         if (+data[1]) {
             sendUSB = true;
         } else {
             sendUSB = false;
             onDisconnect()
         }
+
+        if (+data[2]) {
+            webUSBSendInterval = +data[2]
+        }
+
+        basic.showNumber(sendUSB ? 1 : 0)
+        serial.writeNumbers([sendUSB ? 1 : 0])
         return
     }
 
