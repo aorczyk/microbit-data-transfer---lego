@@ -123,9 +123,7 @@ basic.forever(() => {
             // sendTime = input.runningTime()
             bluetooth.uartWriteString(out.join(',') + '\n')
             // sendTime = input.runningTime() - sendTime
-        }
-        
-        if (sendUSB && now > webUSBLastSendTime + webUSBSendInterval) {
+        } else if (sendUSB && now > webUSBLastSendTime + webUSBSendInterval) {
             serial.writeNumbers(out)
             changed = false
         }
