@@ -114,8 +114,9 @@ basic.forever(() => {
     }
 
     if (changed) {
+        changed = false
+
         if (sendBluetooth && now > bluetoothLastSendTime + bluetoothSendInterval) {
-            changed = false
             bluetoothLastSendTime = now
             out.push(bluetoothLastSendTime)
             out.push(bluetoothSendInterval)
@@ -123,9 +124,13 @@ basic.forever(() => {
             // sendTime = input.runningTime()
             bluetooth.uartWriteString(out.join(',') + '\n')
             // sendTime = input.runningTime() - sendTime
-        } else if (sendUSB && now > webUSBLastSendTime + webUSBSendInterval) {
+        }
+        
+        if (sendUSB && now > webUSBLastSendTime + webUSBSendInterval) {
+            webUSBLastSendTime = now
+            out.push(webUSBLastSendTime)
+            out.push(webUSBSendInterval)
             serial.writeNumbers(out)
-            changed = false
         }
     }
 })
@@ -198,12 +203,13 @@ function messageHandler(receivedString: String){
         return
     }
 
-    if (data[0] == 'WebUSB') {
+    if (data[0] == 'usb') {
+        // sendUSB = !sendUSB;
         if (+data[1]) {
             sendUSB = true;
-            serial.writeNumbers([123])
         } else {
             sendUSB = false;
+            onDisconnect()
         }
         return
     }
