@@ -19,6 +19,7 @@ bluetooth.onBluetoothConnected(function () {
 bluetooth.onBluetoothDisconnected(function () {
     basic.showIcon(IconNames.No)
     sendBluetooth = false;
+    onDisconnect()
 })
 
 input.onButtonPressed(Button.A, function () {
@@ -89,14 +90,17 @@ class Sensor {
 
 let measurements: Sensor[] = [];
 
-function getSesorByKey(key: string): Sensor {
+function getSensorByKey(key: string): Sensor {
     return measurements.filter(s => {
         return s.key == key
     })[0]
 }
 
+let bluetoothLastSendTime = 0;
+let bluetoothSendInterval = 300;
+let changed = false;
+let sendTime = 0;
 basic.forever(() => {
-    let changed = false;
     let now = input.runningTime();
     let out: number[] = [now]
 
@@ -104,18 +108,31 @@ basic.forever(() => {
         if (sensor.status && now >= (sensor.interval + sensor.lastCheck)) {
             changed = changed || sensor.check()
         }
-
         out.push(sensor.value)
     }
 
     if (changed) {
-        if (sendBluetooth) {
+        if (sendBluetooth && now > bluetoothLastSendTime + bluetoothSendInterval) {
+            changed = false
+            bluetoothLastSendTime = now
+            out.push(bluetoothLastSendTime)
+            out.push(bluetoothSendInterval)
+            // out.push(sendTime)
+            // sendTime = input.runningTime()
             bluetooth.uartWriteString(out.join(',') + '\n')
+            // sendTime = input.runningTime() - sendTime
         } else if (sendUSB) {
             serial.writeNumbers(out)
+            changed = false
         }
     }
 })
+
+function onDisconnect(){
+    for (let sensor of measurements) {
+        sensor.status = false;
+    }
+}
 
 function sendDataHeader() {
     let out: string[] = ['time']
@@ -124,11 +141,13 @@ function sendDataHeader() {
         out.push(sensor.key)
     }
 
-    bluetooth.uartWriteString(out.join(',') + '\n')
+    if (sendBluetooth){
+        bluetooth.uartWriteString(out.join(',') + '\n')
+    }
 }
 
 // Temperature
-measurements.push(new Sensor('temp', 2000, () => {
+measurements.push(new Sensor('temp', 1000, () => {
     return input.temperature()
 }, 0))
 
@@ -148,9 +167,19 @@ measurements.push(new Sensor('ay', 1000, () => {
 }, 10))
 
 // Sound
-measurements.push(new Sensor('sound', 500, () => {
+measurements.push(new Sensor('sound', 1000, () => {
     return input.soundLevel()
 }, 10))
+
+// Rand
+measurements.push(new Sensor('rand', 1000, () => {
+    return Math.randomRange(0, 100)
+}, 0))
+
+// Compas
+measurements.push(new Sensor('compas', 500, () => {
+    return input.compassHeading()
+}, 0))
 
 // Sonar
 // measurements.push(new Sensor('sonar', 500, () => {
@@ -170,13 +199,22 @@ function messageHandler(receivedString: String){
     if (data[0] == 'WebUSB') {
         if (+data[1]) {
             sendUSB = true;
+            serial.writeNumbers([123])
         } else {
             sendUSB = false;
         }
         return
     }
 
-    let sensor = getSesorByKey(data[0]);
+    if (data[0] == 'bt') {
+        if (+data[1]) {
+            bluetoothSendInterval = +data[1]
+        }
+
+        return
+    }
+
+    let sensor = getSensorByKey(data[0]);
     if (sensor) {
         let status = data[1]
         if (+status) {
