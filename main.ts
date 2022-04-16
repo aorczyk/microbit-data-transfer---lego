@@ -97,7 +97,9 @@ function getSensorByKey(key: string): Sensor {
 }
 
 let bluetoothLastSendTime = 0;
-let bluetoothSendInterval = 300;
+let bluetoothSendInterval = 500;
+let webUSBLastSendTime = 0;
+let webUSBSendInterval = 500;
 let changed = false;
 let sendTime = 0;
 basic.forever(() => {
@@ -108,7 +110,7 @@ basic.forever(() => {
         if (sensor.status && now >= (sensor.interval + sensor.lastCheck)) {
             changed = changed || sensor.check()
         }
-        out.push(sensor.value)
+        out.push(sensor.value != null ? sensor.value : 0)
     }
 
     if (changed) {
@@ -121,7 +123,9 @@ basic.forever(() => {
             // sendTime = input.runningTime()
             bluetooth.uartWriteString(out.join(',') + '\n')
             // sendTime = input.runningTime() - sendTime
-        } else if (sendUSB) {
+        }
+        
+        if (sendUSB && now > webUSBLastSendTime + webUSBSendInterval) {
             serial.writeNumbers(out)
             changed = false
         }
