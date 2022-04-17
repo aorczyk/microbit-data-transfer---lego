@@ -1,4 +1,4 @@
-let sendBluetooth = true;
+let sendBluetooth = false;
 let sendUSB = false;
 let lastReceivedString: String = null;
 pfTransmitter.connectIrSenderLed(AnalogPin.P2)
@@ -204,20 +204,22 @@ function messageHandler(receivedString: String){
     }
 
     if (data[0] == 'usb') {
-        basic.showString(receivedString + '')
         if (+data[1]) {
-            sendUSB = true;
-        } else {
-            sendUSB = false;
-            onDisconnect()
+            webUSBSendInterval = +data[1]
         }
 
-        if (+data[2]) {
-            webUSBSendInterval = +data[2]
-        }
+        return
+    }
 
-        basic.showNumber(sendUSB ? 1 : 0)
-        serial.writeNumbers([sendUSB ? 1 : 0])
+    if (data[0] == 'usbOn') {
+        sendUSB = true
+
+        return
+    }
+
+    if (data[0] == 'usbOff') {
+        sendUSB = false
+
         return
     }
 
@@ -238,9 +240,11 @@ function messageHandler(receivedString: String){
             sensor.status = false
         }
 
-        if (data.length > 2 && data[2] && data[3]){
+        if (data[2] != null){
             sensor.interval = +data[2];
+        }
 
+        if (data[3] != null) {
             if (data[3] == '') {
                 sensor.delta = null
             } else {
@@ -356,7 +360,7 @@ function messageHandler(receivedString: String){
     }
 }
 
-serial.onDataReceived(serial.delimiters(Delimiters.NewLine), function() {
+serial.onDataReceived(serial.delimiters(Delimiters.NewLine), function () {
     let receivedString = serial.readUntil(serial.delimiters(Delimiters.NewLine))
 
     messageHandler(receivedString)
