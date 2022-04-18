@@ -52,7 +52,7 @@ class Sensor {
     public delta: number;
     private condition: (value: number, lastValue: number) => boolean;
 
-    constructor(key: string, interval: number, getData: () => number, delta: number = null, condition: (value: number, lastValue: number) => boolean = null) {
+    constructor(key: string, interval: number, getData: () => number, delta: number = -1, condition: (value: number, lastValue: number) => boolean = null) {
         this.key = key;
         this.interval = interval;
         this.getData = getData;
@@ -70,7 +70,7 @@ class Sensor {
         this.lastCheck = input.runningTime();
         let changed = true;
 
-        if (this.delta != null && this.value != null){
+        if (this.delta != -1 && this.value != null){
             if (value > (this.value + this.delta) || value < (this.value - this.delta)) {
                 this.value = value;
             } else {
@@ -85,6 +85,24 @@ class Sensor {
         }
 
         return changed;
+    }
+
+    public settings(settings: number[]): void {
+        if (settings[0] != null) {
+            this.status = settings[0] == 1 ? true : false
+        }
+
+        if (settings[1] != null){
+            this.interval = settings[1]
+        }
+
+        if (settings[2] != null) {
+            this.delta = settings[2]
+        }
+    }
+
+    public getSettings(){
+        return [this.status ? 1 : 0, this.interval, this.delta]
     }
 }
 
@@ -197,9 +215,11 @@ measurements.push(new Sensor('rand', 1000, () => {
 function messageHandler(receivedString: String){
     let data = receivedString.split(';')
 
-    if (data.length == 1) {
-        // music.playTone(Note.C, music.beat())
-        basic.showString(data[0])
+    if (data[0] == 'usbOn') {
+        sendUSB = true
+        return
+    } else if (data[0] == 'usbOff') {
+        sendUSB = false
         return
     }
 
@@ -207,18 +227,6 @@ function messageHandler(receivedString: String){
         if (+data[1]) {
             webUSBSendInterval = +data[1]
         }
-
-        return
-    }
-
-    if (data[0] == 'usbOn') {
-        sendUSB = true
-
-        return
-    }
-
-    if (data[0] == 'usbOff') {
-        sendUSB = false
 
         return
     }
@@ -233,32 +241,27 @@ function messageHandler(receivedString: String){
 
     let sensor = getSensorByKey(data[0]);
     if (sensor) {
-        let status = data[1]
-        if (+status) {
-            sensor.status = true
-        } else {
-            sensor.status = false
-        }
+        if (data[1] == 'get'){
+            let settings = sensor.getSettings();
 
-        if (data[2] != null){
-            sensor.interval = +data[2];
-        }
-
-        if (data[3] != null) {
-            if (data[3] == '') {
-                sensor.delta = null
-            } else {
-                sensor.delta = +data[3]
+            if (sendBluetooth) {
+                bluetooth.uartWriteString(settings.join(',') + '\n')
             }
+
+            if (sendUSB) {
+                serial.writeNumbers(settings)
+            }
+        } else {
+            let settings = data.slice(1).map(x => {return +x})
+            sensor.settings(settings)
         }
 
         return
     }
 
-    if (data[0] == 'str') {
+    if (data.length == 1) {
         // music.playTone(Note.C, music.beat())
-        basic.showString(data[1])
-        // basic.showIcon(0)
+        basic.showString(data[0])
         return
     }
 
