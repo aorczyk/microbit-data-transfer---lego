@@ -153,7 +153,7 @@ function messageHandler(receivedString: String){
         return
     } else if (data[0] == 'usbOff') {
         sendUSB = false
-        basic.showIcon(IconNames.Square)
+        basic.showIcon(IconNames.No)
         onDisconnect()
         return
     }
