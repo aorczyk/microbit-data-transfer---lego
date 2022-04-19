@@ -1,12 +1,9 @@
 let sendBluetooth = false;
 let sendUSB = false;
-let lastReceivedString: String = null;
+let legoMode = 0
+
 pfTransmitter.connectIrSenderLed(AnalogPin.P2)
 bluetooth.startUartService()
-let engine1 = 0
-let engine2 = 0
-let interval = 500
-let legoMode = 0
 
 basic.showIcon(IconNames.Square)
 
@@ -46,15 +43,12 @@ class Sensor {
     public value: number;
     public lastValue: number;
     public status: boolean;
-    private isRunning: boolean;
     public delta: number;
-    private condition: (value: number, lastValue: number) => boolean;
 
-    constructor(interval: number, getData: () => number, delta: number = -1, condition: (value: number, lastValue: number) => boolean = null) {
+    constructor(getData: () => number, delta: number = -1, interval: number = 1000) {
         this.interval = interval;
         this.getData = getData;
         this.delta = delta;
-        this.condition = condition;
         this.lastCheck = input.runningTime();
         this.status = false;
     }
@@ -74,10 +68,6 @@ class Sensor {
             }
         } else {
             this.value = value;
-        }
-
-        if (typeof this.condition == 'function' && !this.condition(this.value, this.lastValue)){
-            changed = false;
         }
 
         return changed;
@@ -150,15 +140,20 @@ function onDisconnect(){
     }
 }
 
+let lastReceivedString: String = null;
+let engine1 = 0
+let engine2 = 0
 
 function messageHandler(receivedString: String){
     let data = receivedString.split(';')
 
     if (data[0] == 'usbOn') {
         sendUSB = true
+        basic.showIcon(IconNames.Yes)
         return
     } else if (data[0] == 'usbOff') {
         sendUSB = false
+        basic.showIcon(IconNames.Square)
         onDisconnect()
         return
     }
@@ -322,42 +317,47 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
 })
 
 
-// // Temperature
-measurements[1] = new Sensor(1000, () => {
+// Temperature
+measurements[1] = new Sensor(() => {
     return input.temperature()
 }, 0)
 
-// // Light
-measurements[2] = new Sensor(1000, () => {
+// Light
+measurements[2] = new Sensor(() => {
     return input.lightLevel()
 }, 10)
 
-// // Acceleration X
-measurements[3] = new Sensor(1000, () => {
+// Acceleration X
+measurements[3] = new Sensor(() => {
     return input.acceleration(Dimension.X)
 }, 10)
 
-// // Acceleration Y
-measurements[4] = new Sensor(1000, () => {
+// Acceleration Y
+measurements[4] = new Sensor(() => {
     return input.acceleration(Dimension.Y)
 }, 10)
 
-// // Sound
-measurements[5] = new Sensor(1000, () => {
+// Sound
+measurements[5] = new Sensor(() => {
     return input.soundLevel()
 }, 10)
 
-// // Rand
-measurements[6] = new Sensor(1000, () => {
+// Random numbers
+measurements[6] = new Sensor(() => {
     return Math.randomRange(0, 100)
 }, 0)
 
+// Acceleration Z
+measurements[7] = new Sensor(() => {
+    return input.acceleration(Dimension.Z)
+}, 10)
+
 // // Compas
-// // measurements[7] = new Sensor('compas', 500, () => {
+// // measurements[8] = new Sensor(() => {
 // //     return input.compassHeading()
-// // }, 0)
+// // }, 20)
 
 // // Sonar
-// // measurements[8] = new Sensor('sonar', 500, () => {
+// // measurements[9] = new Sensor(() => {
 // //     return sonar.ping(DigitalPin.P2, DigitalPin.P1, PingUnit.Centimeters)
 // // })
