@@ -1,12 +1,10 @@
 {
-    "name": "micro:bit data transfer - Lego",
+    "name": "micro:bit data transfer - measurements",
     "description": "",
     "dependencies": {
         "core": "*",
         "bluetooth": "*",
-        "microphone": "*",
-        "PF Transmitter": "github:aorczyk/lego-pf-transmitter#v0.0.7",
-        "pxt-sonar": "github:microsoft/pxt-sonar#v0.0.5"
+        "microphone": "*"
     },
     "files": [
         "main.blocks",
