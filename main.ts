@@ -28,7 +28,7 @@ class Sensor {
     public interval: number;
     public lastCheck: number;
     public value: number;
-    public lastValue: number;
+    public values: number[];
     public status: boolean;
     public delta: number;
 
@@ -39,28 +39,38 @@ class Sensor {
         this.lastCheck = input.runningTime();
         this.status = false;
         this.value = null;
+        this.values = [];
     }
 
-    public check(): boolean {
-        this.lastValue = this.value
-        let value = this.getData()
-
+    public check(): void {
         this.lastCheck = input.runningTime();
-        let changed = true;
+        this.values.push(this.getData())
+    }
 
-        if (this.delta != -1 && this.value != null){
-            if (Math.abs(this.value - value) > this.delta) {
-                this.value = value;
-            } else if (this.value != 0 && value == 0){
-                this.value = value;
-            } else {
-                changed = false;
-            }
-        } else {
-            this.value = value;
+    public get(): number {
+        let value = null;
+
+        if (this.interval == -1){
+            value = this.getData()
+        } else if (this.values.length) {
+            value = this.values.reduce((a, b) => a + b, 0) / this.values.length;
+            value = Math.round(value * 10) / 10
+            this.values = []
         }
 
-        return changed;
+        if (value !== null){
+            if (this.delta != -1) {
+                if (Math.abs(this.value - value) > this.delta) {
+                    this.value = value;
+                } else if (this.value != 0 && value == 0) {
+                    this.value = 0;
+                }
+            } else {
+                this.value = value;
+            }
+        }
+
+        return this.value
     }
 
     public settings(settings: number[]): void {
@@ -78,7 +88,7 @@ class Sensor {
     }
 
     public getSettings(){
-        return [this.status ? 1 : 0, this.interval, this.delta]
+        return [0, this.status ? 1 : 0, this.interval, this.delta]
     }
 }
 
@@ -88,36 +98,52 @@ let bluetoothLastSendTime = 0;
 let bluetoothSendInterval = 500;
 let webUSBLastSendTime = 0;
 let webUSBSendInterval = 500;
-let changed = false;
-let sendTime = 0;
+let lastOut = '';
 
-basic.forever(() => {
-    let now = input.runningTime();
-    let out: number[] = [now]
+function getDataLine() {
+    let out: number[] = []
 
     for (let c = 1; c < measurements.length; c++) {
         let sensor = measurements[c]
-        if (sensor){
-            if (sensor.status && now >= (sensor.interval + sensor.lastCheck)) {
-                changed = changed || sensor.check()
-            }
-            out.push(sensor.value != null ? sensor.value : 0)
+        if (sensor) {
+            out.push(sensor.get())
         } else {
             out.push(null)
         }
+
     }
 
-    if (changed) {
-        changed = false
+    return out
+}
 
-        if (bluetoothEnabled && now > bluetoothLastSendTime + bluetoothSendInterval) {
-            bluetoothLastSendTime = now
-            bluetooth.uartWriteString(out.join(',') + '\n')
+basic.forever(() => {
+    let now = input.runningTime();
+
+    for (let c = 1; c < measurements.length; c++) {
+        let sensor = measurements[c]
+        if (sensor && sensor.interval != -1){
+            if (sensor.status && now >= (sensor.interval + sensor.lastCheck)) {
+                sensor.check()
+            }
         }
-        
-        if (webUsbEnabled && now > webUSBLastSendTime + webUSBSendInterval) {
-            webUSBLastSendTime = now
-            serial.writeNumbers(out)
+    }
+
+    if ((bluetoothEnabled && now > bluetoothLastSendTime + bluetoothSendInterval) || (webUsbEnabled && now > webUSBLastSendTime + webUSBSendInterval)) {
+        let out = getDataLine()
+        let outStr = out.join(',');
+        if (outStr != lastOut){
+            lastOut = outStr
+            out.unshift(input.runningTime());
+
+            if (bluetoothEnabled){
+                bluetoothLastSendTime = now
+                bluetooth.uartWriteString(out.join(',') + '\n')
+            }
+
+            if (webUsbEnabled){
+                webUSBLastSendTime = now
+                serial.writeNumbers(out)
+            }
         }
     }
 })
@@ -126,6 +152,8 @@ function onDisconnect(){
     for (let sensor of measurements) {
         if (sensor){
             sensor.status = false;
+            sensor.values = [];
+            sensor.value = null;
         }
     }
 }
@@ -270,10 +298,10 @@ measurements[6] = new Sensor(() => {
     return input.acceleration(Dimension.Z)
 }, 10)
 
-// // Compas
-// // measurements[7] = new Sensor(() => {
-// //     return input.compassHeading()
-// // }, 20)
+// Compas
+// measurements[7] = new Sensor(() => {
+//     return input.compassHeading()
+// }, 20)
 
 // Random numbers
 measurements[8] = new Sensor(() => {
