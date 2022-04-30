@@ -205,6 +205,15 @@ function messageHandler(receivedString: String){
             sensor.settings(settings)
         }
         
+        let settings = sensor.getSettings();
+
+        if (bluetoothEnabled) {
+            bluetooth.uartWriteString(settings.join(',') + '\n')
+        }
+
+        if (webUsbEnabled) {
+            serial.writeNumbers(settings)
+        }
         return
     }
 
