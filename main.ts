@@ -108,7 +108,7 @@ function getDataLine() {
         if (sensor) {
             out.push(sensor.get())
         } else {
-            out.push(null)
+            out.push(0)
         }
 
     }
