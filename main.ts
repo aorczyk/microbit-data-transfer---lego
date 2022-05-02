@@ -303,7 +303,7 @@ measurements[6] = new Sensor(() => {
 //     return input.compassHeading()
 // }, 20)
 
-// Random numbers
-measurements[8] = new Sensor(() => {
-    return Math.randomRange(0, 100)
-}, 0)
+// // Random numbers
+// measurements[8] = new Sensor(() => {
+//     return Math.randomRange(0, 100)
+// }, 0)
