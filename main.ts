@@ -110,7 +110,6 @@ function getDataLine() {
         } else {
             out.push(null)
         }
-
     }
 
     return out
@@ -208,7 +207,7 @@ function messageHandler(receivedString: String){
         return
     }
 
-    if (data[0] == 'get'){
+    if (data[0] == 'getSettings'){
         let sensor = measurements[+data[1]];
         let settings = sensor.getSettings();
 
@@ -218,6 +217,21 @@ function messageHandler(receivedString: String){
 
         if (webUsbEnabled) {
             serial.writeNumbers(settings)
+        }
+
+        return
+    }
+
+    if (data[0] == 'get'){
+        let out = getDataLine()
+        out.unshift(input.runningTime());
+
+        if (bluetoothEnabled){
+            bluetooth.uartWriteString(out.join(',') + '\n')
+        }
+
+        if (webUsbEnabled){
+            serial.writeNumbers(out)
         }
 
         return
