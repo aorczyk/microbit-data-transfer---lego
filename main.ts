@@ -95,9 +95,9 @@ class Sensor {
 let measurements: Sensor[] = [];
 
 let bluetoothLastSendTime = 0;
-let bluetoothSendInterval = 500;
+let bluetoothSendInterval = 300;
 let webUSBLastSendTime = 0;
-let webUSBSendInterval = 500;
+let webUSBSendInterval = 300;
 let lastOut = '';
 
 function getDataLine() {
