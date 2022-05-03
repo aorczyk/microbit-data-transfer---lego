@@ -320,7 +320,17 @@ measurements[7] = new Sensor(() => {
     return input.compassHeading()
 }, 20)
 
-// // Random numbers
-// measurements[8] = new Sensor(() => {
-//     return Math.randomRange(0, 100)
-// }, 0)
+// Strength 2D
+measurements[8] = new Sensor(() => {
+    let accelX = input.acceleration(Dimension.X)
+    let accelY = input.acceleration(Dimension.Y)
+    return Math.sqrt((accelX * accelX) + (accelY * accelY))
+}, 10)
+
+// Strength 3D
+measurements[9] = new Sensor(() => {
+    let accelX = input.acceleration(Dimension.X)
+    let accelY = input.acceleration(Dimension.Y)
+    let accelZ = input.acceleration(Dimension.Z)
+    return Math.sqrt((accelX * accelX) + (accelY * accelY) + (accelZ * accelZ))
+}, 10)
