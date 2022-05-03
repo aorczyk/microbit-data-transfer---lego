@@ -108,7 +108,7 @@ function getDataLine() {
         if (sensor) {
             out.push(sensor.get())
         } else {
-            out.push(null)
+            out.push(0)
         }
     }
 
@@ -117,8 +117,9 @@ function getDataLine() {
 
 basic.forever(() => {
     let now = input.runningTime();
+    let sensorsNr = measurements.length;
 
-    for (let c = 1; c < measurements.length; c++) {
+    for (let c = 1; c < sensorsNr; c++) {
         let sensor = measurements[c]
         if (sensor && sensor.interval != -1){
             if (sensor.status && now >= (sensor.interval + sensor.lastCheck)) {
@@ -130,16 +131,18 @@ basic.forever(() => {
     if ((bluetoothEnabled && now > bluetoothLastSendTime + bluetoothSendInterval) || (webUsbEnabled && now > webUSBLastSendTime + webUSBSendInterval)) {
         let out = getDataLine()
         let outStr = out.join(',');
+
         if (outStr != lastOut){
-            lastOut = outStr
             out.unshift(input.runningTime());
 
             if (bluetoothEnabled){
+                lastOut = outStr
                 bluetoothLastSendTime = now
                 bluetooth.uartWriteString(out.join(',') + '\n')
             }
 
             if (webUsbEnabled){
+                lastOut = outStr
                 webUSBLastSendTime = now
                 serial.writeNumbers(out)
             }
@@ -312,10 +315,10 @@ measurements[6] = new Sensor(() => {
     return input.acceleration(Dimension.Z)
 }, 10)
 
-// Compas
-// measurements[7] = new Sensor(() => {
-//     return input.compassHeading()
-// }, 20)
+// Compass
+measurements[7] = new Sensor(() => {
+    return input.compassHeading()
+}, 20)
 
 // // Random numbers
 // measurements[8] = new Sensor(() => {
