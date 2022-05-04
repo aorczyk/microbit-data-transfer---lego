@@ -288,44 +288,44 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
 // Temperature
 measurements[1] = new Sensor(() => {
     return input.temperature()
-}, 0)
+}, 2, 100)
 
 // Light
 measurements[2] = new Sensor(() => {
     return input.lightLevel()
-}, 10)
+}, 20, 100)
 
 // Sound
 measurements[3] = new Sensor(() => {
     return input.soundLevel()
-}, 10)
+}, 20, 20)
 
 // Acceleration X
 measurements[4] = new Sensor(() => {
     return input.acceleration(Dimension.X)
-}, 10)
+}, 20, 500)
 
 // Acceleration Y
 measurements[5] = new Sensor(() => {
     return input.acceleration(Dimension.Y)
-}, 10)
+}, 20, 500)
 
 // Acceleration Z
 measurements[6] = new Sensor(() => {
     return input.acceleration(Dimension.Z)
-}, 10)
+}, 20, 500)
 
 // Compass
 measurements[7] = new Sensor(() => {
     return input.compassHeading()
-}, 20)
+}, 5, 100)
 
 // Strength 2D
 measurements[8] = new Sensor(() => {
     let accelX = input.acceleration(Dimension.X)
     let accelY = input.acceleration(Dimension.Y)
     return Math.sqrt((accelX * accelX) + (accelY * accelY))
-}, 10)
+}, 20, 500)
 
 // Strength 3D
 measurements[9] = new Sensor(() => {
@@ -333,4 +333,4 @@ measurements[9] = new Sensor(() => {
     let accelY = input.acceleration(Dimension.Y)
     let accelZ = input.acceleration(Dimension.Z)
     return Math.sqrt((accelX * accelX) + (accelY * accelY) + (accelZ * accelZ))
-}, 10)
+}, 20, 500)
