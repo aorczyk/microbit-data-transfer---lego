@@ -32,10 +32,10 @@ class Sensor {
     public status: boolean;
     public delta: number;
 
-    constructor(getData: () => number, delta: number = -1, interval: number = 1000) {
+    constructor(getData: () => number, delta: number = null, interval: number = 1000) {
         this.interval = interval;
         this.getData = getData;
-        this.delta = delta;
+        this.delta = delta === null ? -1 : delta;
         this.lastCheck = input.runningTime();
         this.status = false;
         this.value = null;
@@ -284,48 +284,49 @@ bluetooth.onUartDataReceived(serial.delimiters(Delimiters.NewLine), function () 
     messageHandler(receivedString)
 })
 
+// --- Measurements ---
 
 // Temperature
 measurements[1] = new Sensor(() => {
     return input.temperature()
-}, 2, 100)
+})
 
 // Light
 measurements[2] = new Sensor(() => {
     return input.lightLevel()
-}, 20, 100)
+})
 
 // Sound
 measurements[3] = new Sensor(() => {
     return input.soundLevel()
-}, 20, 20)
+})
 
 // Acceleration X
 measurements[4] = new Sensor(() => {
     return input.acceleration(Dimension.X)
-}, 20, 500)
+})
 
 // Acceleration Y
 measurements[5] = new Sensor(() => {
     return input.acceleration(Dimension.Y)
-}, 20, 500)
+})
 
 // Acceleration Z
 measurements[6] = new Sensor(() => {
     return input.acceleration(Dimension.Z)
-}, 20, 500)
+})
 
 // Compass
 measurements[7] = new Sensor(() => {
     return input.compassHeading()
-}, 5, 100)
+})
 
 // Strength 2D
 measurements[8] = new Sensor(() => {
     let accelX = input.acceleration(Dimension.X)
     let accelY = input.acceleration(Dimension.Y)
     return Math.sqrt((accelX * accelX) + (accelY * accelY))
-}, 20, 500)
+})
 
 // Strength 3D
 measurements[9] = new Sensor(() => {
@@ -333,4 +334,4 @@ measurements[9] = new Sensor(() => {
     let accelY = input.acceleration(Dimension.Y)
     let accelZ = input.acceleration(Dimension.Z)
     return Math.sqrt((accelX * accelX) + (accelY * accelY) + (accelZ * accelZ))
-}, 20, 500)
+})
