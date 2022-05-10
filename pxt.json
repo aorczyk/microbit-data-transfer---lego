@@ -32,7 +32,8 @@
                 "bluetooth": {
                     "open": 1,
                     "pairing_mode": 0,
-                    "whitelist": 0
+                    "whitelist": 0,
+                    "security_level": null
                 }
             }
         }
